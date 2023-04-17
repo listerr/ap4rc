@@ -11,6 +11,8 @@ $labels['popup_successful_deletion'] = 'Entrada deletada com sucesso';
 $labels['missingapplicationname'] = 'Por favor informe um nome de aplicação válido.';
 
 $labels['application'] = 'Aplicação';
+$labels['last_access'] = 'último acesso';
+$labels['last_ip'] = 'último IP;
 $labels['creation_date'] = 'Criado em';
 $labels['expiry_date']   = 'Expira em';
 $labels['created'] = 'Criado';

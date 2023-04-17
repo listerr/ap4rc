@@ -39,6 +39,8 @@ class ap4rc extends rcube_plugin
     private $user_lookup_field;
     private $user_lookup_data;
     private $strict_userid_lookup;
+    private $show_last_access;
+    private $last_access_table;
     private $username_format;
     private $show_application;
     private $application_name_characters;
@@ -65,6 +67,8 @@ class ap4rc extends rcube_plugin
         $this->aid_pad                         = $rcmail->config->get('ap4rc_aid_pad', 4);
         $this->username_format                 = $rcmail->config->get('ap4rc_username_format', 1);
         $this->show_application                = $rcmail->config->get('ap4rc_show_application', 'auto');
+        $this->show_last_access                = $rcmail->config->get('ap4rc_show_last_access', false);
+        $this->last_access_table               = $rcmail->config->get('ap4rc_last_access_table', 'last_login');
         $this->strict_userid_lookup            = $rcmail->config->get('ap4rc_strict_userid_lookup', false);
         $this->application_name_characters     = $rcmail->config->get('ap4rc_application_name_characters', "a-zA-Z0-9._+-");
         $this->generated_password_length       = $rcmail->config->get('ap4rc_generated_password_length', 64);
@@ -135,6 +139,7 @@ class ap4rc extends rcube_plugin
         $application_passwords = array();
         $cols = 3;
         $cols = $this->show_application ? ($cols +1) : $cols;
+        $cols = $this->show_last_access ? ($cols +2) : $cols;
 
         $db       = $rcmail->get_dbh();
         $db_table = $db->table_name('application_passwords', true);
@@ -160,6 +165,13 @@ class ap4rc extends rcube_plugin
 
         $table->add_header('name', $this->gettext('new_username'));
         if ($this->show_application) { $table->add_header('application', $this->gettext('application')); }
+        if ($this->show_last_access) { 
+          
+           $table->add_header('last_access', $this->gettext('last_access')); 
+           $table->add_header('last_ip', $this->gettext('last_ip')); 
+          
+          }
+
         $table->add_header('expiry_date', $this->gettext('expiry_date'));
         $table->add_header('actions', '');
 
@@ -176,7 +188,13 @@ class ap4rc extends rcube_plugin
 
            $table->add(null,       $this->application_username($record['application'], $record['id']));
            if ($this->show_application) { $table->add(null,       $record['application']); }
-           $table->add($css_class, $record['expiry']);
+           if ($this->show_last_access) { 
+            $last_access = $this->get_last_access($record['id']);
+            $table->add(null,       $last_access['last_access']);
+            $table->add(null,       $last_access['last_ip']);
+           }
+
+            $table->add($css_class, $record['expiry']);
 
            $delete_link = html::tag('a',
              array(
@@ -239,12 +257,12 @@ class ap4rc extends rcube_plugin
         $rcmail->get_user_name(),
         $application,
         $hashed_password,
-        $rcmail->get_user_id()
-  );
+	$rcmail->get_user_id()
+	);
 
-    // This code will only be reached if we did not see a duplicate entry exception
-    if ($result && $db->affected_rows($result) > 0) {
-    $this->new_id = $db->insert_id();
+        // This code will only be reached if we did not see a duplicate entry exception
+	if ($result && $db->affected_rows($result) > 0) {
+	  $this->new_id = $db->insert_id();
           $this->new_password = $new_password;
           $this->new_application = $application;
           $this->password_save_error = null;
@@ -316,23 +334,25 @@ class ap4rc extends rcube_plugin
 
     private function application_username($appname, $appid) {
 
-      $rcmail = rcmail::get_instance();
-      $username = $rcmail->get_user_name();
+	    $rcmail = rcmail::get_instance();
+	    $username = $rcmail->get_user_name();
 
-      switch ($this->username_format) {
+	    switch ($this->username_format) {
 
-        case 2:
-          return $username;
+              case 2:
+               return $username;
 
-        case 3:
-          return strstr($username, '@',true) . '-' . str_pad($appid, $this->aid_pad, '0', STR_PAD_LEFT) . strstr($username, '@');
+	      case 3:
+               return strstr($username, '@',true) . '-' . str_pad($appid, $this->aid_pad, '0', STR_PAD_LEFT) . strstr($username, '@');
 
-        case 4:
-          return strtoupper(substr($username, 0, 2)) . str_pad($appid, $this->aid_pad, '0', STR_PAD_LEFT) . strstr($username, '@');
-          
-        default:
-          return $username . '@' . $appname;
-      }
+              case 4:
+               return strtoupper(substr($username, 0, 2)) . str_pad($appid, $this->aid_pad, '0', STR_PAD_LEFT) . strstr($username, '@');
+		      
+              default:
+		return $username . '@' . $appname;
+
+	    }
+
     }
 
     public function settings_apppassadder($attrib)
@@ -392,4 +412,27 @@ class ap4rc extends rcube_plugin
         }
         return $randomString;
     }
+
+    private function get_last_access($ap_id)
+    {
+
+      $rcmail = rcmail::get_instance();
+      $db       = $rcmail->get_dbh();
+      $db_table = $db->table_name($this->last_access_table, true);
+
+      $result = $db->query( "
+      SELECT
+      `last_access`, `last_ip` FROM $db_table WHERE `ap_id` = ?
+      ORDER BY last_access DESC LIMIT 1
+      ",
+      $ap_id );
+      $record = $db->fetch_assoc($result);
+
+      $last_access = !empty($record['last_access']) ? date("Y-m-d H:i:s T", $record['last_access']) : 'none';
+      $last_ip = !empty($record['last_ip']) ?  $record['last_ip'] : 'none';
+
+      return compact('last_access', 'last_ip');
+
+     }
+
 }
