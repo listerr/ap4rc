@@ -90,8 +90,8 @@ password_query = \
    SELECT username, password, id as userdb_ap_id \
    FROM application_passwords \
    WHERE username='%u' \
-         AND password = SHA2('%w',"512") \
-         AND created >= NOW() - INTERVAL 2 MONTH;
+         AND password = '%{sha512:password}' \
+         AND created >= NOW() - INTERVAL 12 MONTH;
 ```
 
 Here is a slightly fancier example where dovecot uses the table p_mailbox for regular 
@@ -110,7 +110,7 @@ password_query = \
    WHERE ap.username='%u' \
          AND mb.active = 1 \
          AND ap.password = '%{sha512:password}' \
-         AND ap.created >= NOW() - INTERVAL 2 MONTH;
+         AND ap.created >= NOW() - INTERVAL 12 MONTH;
 ```
 
 After changing the configuration, run `doveadm reload`
