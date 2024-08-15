@@ -105,9 +105,7 @@ Default: `1 WEEK`
 Username format to use:
 
  *  `1` "username@application"
- *  `2` "username" / user@example.com (use same username everywhere)"
- *  `3` "user-0003@example.com"
- *  `4` "AB0008@example.com"
+ *  `2` "username" / user@example.com" (use same username everywhere)
 
 Dovecot needs to be configured to use the chosen username format.
 
@@ -140,14 +138,6 @@ Default: `0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ.,!?(){}
 Always hide/show application name column? (true/false)
 
 Default: `auto` - show only if configured username format does not contain application name.
-
-`ap4rc_aid_pad`
-
-If using options 3 or 4 for `ap4rc_username_format`, pad to this many digits
-e.g. 4 = "8 -> 0008". If you have lots of users / frequent password expiry, then 
-you may require more digits for format 3.
-
-Default: `4`
 
 `ap4rc_strict_userid_lookup`
 

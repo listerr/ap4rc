@@ -35,7 +35,6 @@ class ap4rc extends rcube_plugin
     private $new_application;
     private $password_save_success;
     private $password_save_error;
-    private $aid_pad;
     private $user_lookup_field;
     private $user_lookup_data;
     private $strict_userid_lookup;
@@ -64,7 +63,6 @@ class ap4rc extends rcube_plugin
     {
         $rcmail = rcmail::get_instance();
 
-        $this->aid_pad                         = $rcmail->config->get('ap4rc_aid_pad', 4);
         $this->username_format                 = $rcmail->config->get('ap4rc_username_format', 1);
         $this->show_application                = $rcmail->config->get('ap4rc_show_application', 'auto');
         $this->show_last_access                = $rcmail->config->get('ap4rc_show_last_access', false);
@@ -186,7 +184,7 @@ class ap4rc extends rcube_plugin
              $css_class['class'] = 'expired';
            }
 
-           $table->add(null,       $this->application_username($record['application'], $record['id']));
+           $table->add(null,       $this->application_username($record['application']));
            if ($this->show_application) { $table->add(null,       $record['application']); }
            if ($this->show_last_access) { 
             $last_access = $this->get_last_access($record['id']);
@@ -318,7 +316,7 @@ class ap4rc extends rcube_plugin
             html::tag('div',  null,
                html::tag('dl', null,
                  html::tag('dt', $important_style, $this->gettext('new_username')) .
-                   html::tag('dd', array('id'=>'new_username', 'class'=>'ap4rc-copy'), $this->application_username($this->new_application, $this->new_id)) .
+                   html::tag('dd', array('id'=>'new_username', 'class'=>'ap4rc-copy'), $this->application_username($this->new_application)) .
                  html::tag('dt', $important_style, $this->gettext('new_password')) .
                    html::tag('dd', array('id'=>'new_password', 'class'=>'ap4rc-copy'), $this->new_password)
                )
@@ -332,7 +330,7 @@ class ap4rc extends rcube_plugin
         }
     }
 
-    private function application_username($appname, $appid) {
+    private function application_username($appname) {
 
 	    $rcmail = rcmail::get_instance();
 	    $username = $rcmail->get_user_name();
