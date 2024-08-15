@@ -323,12 +323,6 @@ class ap4rc extends rcube_plugin
 
         case 2:
           return $username;
-
-        case 3:
-          return strstr($username, '@',true) . '-' . str_pad($appid, $this->aid_pad, '0', STR_PAD_LEFT) . strstr($username, '@');
-
-        case 4:
-          return strtoupper(substr($username, 0, 2)) . str_pad($appid, $this->aid_pad, '0', STR_PAD_LEFT) . strstr($username, '@');
           
         default:
           return $username . '@' . $appname;
