@@ -109,7 +109,7 @@ password_query = \
     roundcubemail.p_mailbox mb ON mb.username = ap.username \
    WHERE ap.username='%u' \
          AND mb.active = 1 \
-         AND ap.password = SHA2('%w',"512") \
+         AND ap.password = '%{sha512:password}' \
          AND ap.created >= NOW() - INTERVAL 2 MONTH;
 ```
 
@@ -154,7 +154,7 @@ Note that this will delete all the rows with `ap_id` = `0`
 
 ```sql
 -- Delete all last_login rows where application_password id no longer exists:
-DELETE FROM last_login WHERE ap_id NOT IN ( select id from application_passwords);
+DELETE FROM last_login WHERE ap_id NOT IN ( select id from application_passwords );
 
 -- Keep only most recent (highest) last login entry for each ap_id:
 DELETE t1 FROM last_login t1
