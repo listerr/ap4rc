@@ -117,7 +117,7 @@ default_pass_scheme = SHA512
 password_query = SELECT username,password \
   FROM application_passwords \
    WHERE username='%n' AND application='%d' \
-   AND created >= NOW() - INTERVAL 2 MONTH;  
+   AND created >= NOW() - INTERVAL 12 MONTH;  
 
 ```
 
@@ -127,7 +127,7 @@ If your dovecot usernames are email addresses, Dovecot (as of v2.2.6) supports t
 password_query = SELECT username,password \
   FROM application_passwords \
    WHERE username='%n@%{domain_first}' AND application='%{domain_last}' \
-   AND created >= NOW() - INTERVAL 2 MONTH;  
+   AND created >= NOW() - INTERVAL 12 MONTH;  
 
 ```
 
@@ -139,7 +139,7 @@ password_query = \
    FROM application_passwords \
    WHERE username=SUBSTRING_INDEX('%u','@',2) \
          AND application = SUBSTRING_INDEX('%d','@',-1) \
-         AND created >= NOW() - INTERVAL 2 MONTH;
+         AND created >= NOW() - INTERVAL 12 MONTH;
 ```
 
 
@@ -372,7 +372,27 @@ password_query = \
    FROM application_passwords \
    WHERE username='%u' \
          AND password = SHA2('%w',"512") \
-         AND created >= NOW() - INTERVAL 2 MONTH;
+         AND created >= NOW() - INTERVAL 12 MONTH;
+
+```
+
+Dovecot v2.2.27+ support hashing a variable instead of passing the plaintext password to the SQL in order for mySQL to hash the password. 
+This is safer since plaintext passwords will not show up in SQL/Dovecot server debug logs:
+
+
+```
+driver = mysql
+connect = host=localhost dbname=<your_database_name> user=<your_database_user> password=<your_database_password>
+default_pass_scheme = SHA512
+
+# ap4rc format 2
+# Use the same username everywhere, select by password:
+password_query = \
+   SELECT username, password, id as userdb_ap_id \
+   FROM application_passwords \
+   WHERE username='%u' \
+         AND password = '%{sha512:password}' \
+         AND created >= NOW() - INTERVAL 12 MONTH;
 
 ```
 
@@ -384,120 +404,6 @@ required, but make it possible to determine which entry is being used, or for lo
 - Searching by password might not give good performance if you have a LOT of users.
 - If dovecot's `auth_debug` is enabled, the SQL query (and hence the user's password) can be logged. Ensure `auth_debug` is turned off on production servers. Newer versions of Dovecot allow better filtering of log events (see `log_debug`)
 
-
-## Format 3: user-0003@example.com
-
-ID is always last N chars of username, e.g. user-0004@example.com -> 0004.
-
-The length of the ID to pad "0" is configured with `ap4rc_aid_pad` option. (Default 4).
-
-This works and is quite efficient, but proved unpopular with users.
-
-If the username _looks_ like an email address, some mobile clients do not 
-allow the user to configure their _actual_ email address separately. (Or it's
-possible, but is difficult to find in the settings.)
-
-It can be useful for testing, however. If you use format 2 above, then it's possible
-to enable this in addition. (if you put the sql conf in a different file).
-
-This selects the exact application password by ID (e.g. if you want to test 
-password hashing is working etc.)
-
-
-### Auth Config Example
-
-```
-## (Your existing passdb entries...)
-
-# ap4rc format 3: "user-0004@example.com"
-passdb {
-  driver = sql
-  # change to your username format:
-  username_filter = *-????@*
-  args = /etc/dovecot/dovecot-sql-ap4rc-f3.conf.ext
-  auth_verbose = no
-  skip = authenticated
-}
-
-[...]
-
-## (Your existing userdb entries...)
-
-# Example for virtualised dovecot, where user's mailboxes are in `/var/mailboxes/domain/username`
-
-userdb {
-  driver = static
-  skip = found
-  override_fields = uid=vmail gid=vmail home=/var/mailboxes/%Ld/%Ln
-}
-
-```
-
-### SQL Dict Config 
-
-`dovecot-sql-ap4rc-f3.conf.ext`
-
-```
-driver = mysql
-connect = host=localhost dbname=<your_database_name> user=<your_database_user> password=<your_database_password>
-default_pass_scheme = SHA512
-
-# ap4rc format 3: "user-0004@example.com"
-
-# ID is always last 4 chars of username:
-# Convert: user-0004 -> 0004
-# 'username' must return the correct username.
-# check user begins with same chars
-# check domain matches
-password_query = \
-   SELECT username, password \
-   FROM application_passwords \
-   WHERE id ='%-4.4n' \
-         AND username LIKE '%0.2n%%' \
-         AND username LIKE '%%@%d' \
-         AND created >= NOW() - INTERVAL 2 MONTH;
-```
-
-
-## Format 4: AB0008@example.com
-
-Similar to Format 3. But ID is all but FIRST TWO chars of username.
-
-Allows for any length of id. (AB8@example.com is equivalent to AB0008@example.com)
-
-### Auth Config Example
-
-```
-# ap4rc format 4: "AB0008@example.com"
-passdb {
-  driver = sql
-  # username_filter = *@*
-  args = /etc/dovecot/dovecot-sql-ap4rc.conf.ext
-  auth_verbose = no
-  skip = authenticated
-}
-
-
-```
-
-### SQL Dict Config 
-
-`dovecot-sql-ap4rc.conf.ext`
-
-```
-driver = mysql
-connect = host=localhost dbname=<your_database_name> user=<your_database_user> password=<your_database_password>
-default_pass_scheme = SHA512
-
-# ap4rc format 4: "AB0008@example.com"
-# id is all but first two chars of username.
-# 'username' must return the correct username.
-password_query = \
-   SELECT username, password \
-   FROM application_passwords \
-   WHERE id = '%2.0n' \
-         AND created >= NOW() - INTERVAL 2 MONTH;
-```
 
 ## Preventing users from using roundcube password with IMAP
 
