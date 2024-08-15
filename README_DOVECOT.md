@@ -376,8 +376,9 @@ password_query = \
 
 ```
 
-Dovecot v2.2.27+ support hashing a variable instead of passing the plaintext password to the SQL in order for mySQL to hash the password. 
-This is safer since plaintext passwords will not show up in SQL/Dovecot server debug logs:
+- If dovecot's `auth_debug` is enabled, the SQL query (and hence the user's password) can be logged. Ensure `auth_debug` is turned off on production servers. Newer versions of Dovecot allow better filtering of log events (see `log_debug`)
+
+- Dovecot v2.2.27+ support hashing a variable instead of passing the plaintext password to the SQL in order for mySQL to hash the password. This is safer since plaintext passwords will not show up in SQL/Dovecot server debug logs:
 
 
 ```
@@ -402,7 +403,6 @@ required, but make it possible to determine which entry is being used, or for lo
 ### Notes
 
 - Searching by password might not give good performance if you have a LOT of users.
-- If dovecot's `auth_debug` is enabled, the SQL query (and hence the user's password) can be logged. Ensure `auth_debug` is turned off on production servers. Newer versions of Dovecot allow better filtering of log events (see `log_debug`)
 
 
 ## Preventing users from using roundcube password with IMAP
