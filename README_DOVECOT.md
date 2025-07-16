@@ -17,7 +17,7 @@ Some features / variables used require minimum versions of Dovecot:
 - **IMPORTANT! For Dovecot 2.4+**
    - **Short variable names** have been deprecated. For example, `%u` no longer works and must be replaced with the long name `%{user}`
    - **Modifiers** have been made more consistent. For example, `%Lu` must be replaced with the new form: `%{user | lower }`
-   - See the [Dovecot Upgrading notes](https://doc.dovecot.org/2.4.1/installation/upgrade/2.3-to-2.4.html) (Also to refer to other upgrading notes if you are upgrading from older (< 2.3) versions of Dovecot.
+   - See the [Dovecot Upgrading notes](https://doc.dovecot.org/2.4.1/installation/upgrade/2.3-to-2.4.html) (Also to refer to other upgrading notes if you are upgrading from older (< 2.3) versions of Dovecot.)
    - This is good: It makes the configuration more consistent and easier to understand. But you need to carefully review and update your existing config files to have a working Dovecot 2.4 installation.
  
 The configuration examples provided here work with **Dovecot 2.3**. If using Dovecot 2.4+ you will need to update the config from these examples. When I have tested and have a working config for Dovecot 2.4, I will update this doc for Dovecot 2.4.
