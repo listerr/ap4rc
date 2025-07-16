@@ -12,6 +12,17 @@ Some features / variables used require minimum versions of Dovecot:
 - At least 2.2.30 required for `username_filter`
 - For versions <2.3.14, use `%{real_lport}` / `%{real_rip}` instead of `%{real_local_port} / %{real_remote_ip}`
 
+## Note for Dovecot 2.4
+
+- **IMPORTANT! For Dovecot 2.4+**
+   - **Short variable names** have been deprecated. For example, `%u` no longer works and must be replaced with the long name `%{user}`
+   - **Modifiers** have been made more consistent. For example, `%Lu` must be replaced with the new form: `%{user | lower }`
+   - See the [Dovecot Upgrading notes](https://doc.dovecot.org/2.4.1/installation/upgrade/2.3-to-2.4.html) (Also to refer to other upgrading notes if you are upgrading from older (< 2.3) versions of Dovecot.
+   - This is good: It makes the configuration more consistent and easier to understand. But you need to carefully review and update your existing config files to have a working Dovecot 2.4 installation.
+ 
+The configuration examples provided here work with **Dovecot 2.3**. If using Dovecot 2.4+ you will need to update the config from these examples. When I have tested and have a working config for Dovecot 2.4, I will update this doc for Dovecot 2.4.
+
+
 ## Dovecot configuration
 
 Dovecot's config files are usually somewhere like `/etc/dovecot`, and includes several other files from `dovecot.conf` under `/etc/dovecot/conf.d`
@@ -56,11 +67,11 @@ example configurations. Some of the examples (in the Dovecot docs or elsewhere) 
 
 > This document provides useful examples, but we cannot provide for every possible configuration and environment. You need to **ADAPT THESE EXAMPLES** for your particular requirements. Please DO NOT just copy+paste these examples without thought and expect it to work!
 
-If unsure, refer to the Dovecot documentation:
+If unsure, refer to the Dovecot documentation (Dovecot 2.3):
 
-- [Password databases (passdb)](https://doc.dovecot.org/configuration_manual/authentication/password_databases_passdb) / [Password database extra fields](https://doc.dovecot.org/configuration_manual/authentication/password_database_extra_fields)
-- [User databases (userdb)](https://doc.dovecot.org/configuration_manual/authentication/user_databases_userdb) / [User database extra fields](https://doc.dovecot.org/configuration_manual/authentication/user_database_extra_fields)
-- [Multiple authentication databases](https://doc.dovecot.org/configuration_manual/authentication/multiple_authentication_databases)
+- [Password databases (passdb)](https://doc.dovecot.org/2.3/configuration_manual/authentication/password_databases_passdb) / [Password database extra fields](https://doc.dovecot.org/2.3/configuration_manual/authentication/password_database_extra_fields)
+- [User databases (userdb)](https://doc.dovecot.org/2.3/configuration_manual/authentication/user_databases_userdb) / [User database extra fields](https://doc.dovecot.org/2.3/configuration_manual/authentication/user_database_extra_fields)
+- [Multiple authentication databases](https://doc.dovecot.org/2.3/configuration_manual/authentication/multiple_authentication_databases)
 
 > **The order in which passdb / userdb entries appear in the configuration is significant!** 
 
@@ -102,7 +113,7 @@ userdb {
 ```
 
 You can also use the 'prefetch' method suggested in the example if your SQL query returns
-all the required `userdb_` fields. See [Dovecot Prefetch Userdb](https://doc.dovecot.org/configuration_manual/authentication/prefetch_userdb/)
+all the required `userdb_` fields. See [Dovecot 2.3: Prefetch Userdb](https://doc.dovecot.org/2.3/configuration_manual/authentication/prefetch_userdb/)
 
 ### SQL Dict Config 
 
@@ -379,7 +390,6 @@ password_query = \
 - If dovecot's `auth_debug` is enabled, the SQL query (and hence the user's password) can be logged. Ensure `auth_debug` is turned off on production servers. Newer versions of Dovecot allow better filtering of log events (see `log_debug`)
 
 - Dovecot v2.2.27+ support hashing a variable instead of passing the plaintext password to the SQL in order for mySQL to hash the password. This is safer since plaintext passwords will not show up in SQL/Dovecot server debug logs:
-
 
 ```
 driver = mysql
