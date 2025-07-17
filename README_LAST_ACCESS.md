@@ -1,6 +1,6 @@
 # Show Last Access / IP 
 
-With dovecot's [last_login plugin](https://doc.dovecot.org/configuration_manual/lastlogin_plugin/) 
+With Dovecot's [last_login plugin](https://doc.dovecot.org/2.3/configuration_manual/lastlogin_plugin/) 
 enabled, we can get information on the last access time and IP address and display this for each
 application specific password.
 
