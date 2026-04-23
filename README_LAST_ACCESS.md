@@ -8,6 +8,26 @@ application specific password.
 
 ## Dovecot 2.4.x configuration
 
+Last login plugin needs to be enabled for the services you want it to log for.
+
+Example for `/etc/dovecot/conf.d/20-imap.conf:`, add `last_login = yes`
+
+```
+
+protocol imap {
+  # Space separated list of plugins to load (default is global mail_plugins).
+  mail_plugins {
+    # imap_sieve = yes
+    last_login = yes
+  }
+
+}
+```
+
+- You can also add it to other services e.g. pop3 / submission.
+
+Last login plugin configuration example:
+
 `/etc/dovecot/conf.d/10-last-login.conf:`
 
 ```
