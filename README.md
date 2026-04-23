@@ -162,7 +162,11 @@ column in `users` table is required to match old user data records with the new 
 
 ## Dovecot side of things
 
-See [README_DOVECOT](README_DOVECOT.md) for more configuration examples and details.
+- See [README_DOVECOT-2.4](README_DOVECOT-2.4.md) for Dovecot 2.4.x
+- See [README_DOVECOT-2.3](README_DOVECOT-2.3.md) for Dovecot 2.3.x 
+
+For more configuration examples and details. (Dovecot 2.3 examples are for reference are no longer updated.)
+
 
 ### Prequisists
 

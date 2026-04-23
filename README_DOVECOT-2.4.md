@@ -1,38 +1,28 @@
 # Dovecot Configuration Examples
 
-The following examples are provided for MySQL + Dovecot **2.3.20**
+The following examples are provided for MySQL + Dovecot **2.4.1+**
 
 You may need to adapt them if you are using different database engine (postgres/sqlite).
 
 ## Dovecot supported features
 
-Some features / variables used require minimum versions of Dovecot:
+- Has been tested on Dovecot 2.4.3
+- Check dovecot [config compatibility](https://doc.dovecot.org/latest/installation/upgrade/2.4-to-2.4.x.html) and `dovecot_config_version` config option when upgrading.
 
-- At least 2.2.33 required for "`%{if;`" conditionals
-- At least 2.2.30 required for `username_filter`
-- For versions <2.3.14, use `%{real_lport}` / `%{real_rip}` instead of `%{real_local_port} / %{real_remote_ip}`
+## Changes for Dovecot 2.4
 
-## Note for Dovecot 2.4
-
-- **IMPORTANT! For Dovecot 2.4+**
+- **IMPORTANT! Breaking changes upgrading to Dovecot 2.4+**
    - **Short variable names** have been deprecated. For example, `%u` no longer works and must be replaced with the long name `%{user}`
-   - **Modifiers** have been made more consistent. For example, `%Lu` must be replaced with the new form: `%{user | lower }`
-   - See the [Dovecot Upgrading notes](https://doc.dovecot.org/2.4.1/installation/upgrade/2.3-to-2.4.html) (Also to refer to other upgrading notes if you are upgrading from older (< 2.3) versions of Dovecot.)
+   - **Modifiers** have been made more consistent. For example, `%Lu` must be replaced with the new filter format: `%{user | lower }`
+   - **Database queries** used to be configured in separate files. Queries are now configured inline with the auth config.
+   - See the [Dovecot Upgrading notes](https://doc.dovecot.org/latest/installation/upgrade/2.3-to-2.4.html) (Also to refer to other upgrading notes if you are upgrading from older (< 2.3) versions of Dovecot.)
    - This is good: It makes the configuration more consistent and easier to understand. But you need to carefully review and update your existing config files to have a working Dovecot 2.4 installation.
- 
-The configuration examples provided here work with **Dovecot 2.3**. If using Dovecot 2.4+ you will need to update the config from these examples. When I have tested and have a working config for Dovecot 2.4, I will update this doc for Dovecot 2.4.
-
+   - See: [This page](https://doc.dovecot.org/2.4.3/installation/upgrade/2.3-to-2.4.html) for a list of most of the variable changes between 2.3 and 2.4. Dovecot provides an [Upgrader](https://dovecot.org/upgrader/) tool to help update configs. (It's not perfect, but can help the most common changes. You will still need to make a few changes yourself (e.g. SQL queries))
+   - My approach to upgrading was to start with a fresh 2.4 install and compare the config files side-by-side. Many of the old config files were no longer needed or are the defaults anyway.
 
 ## Dovecot configuration
 
 Dovecot's config files are usually somewhere like `/etc/dovecot`, and includes several other files from `dovecot.conf` under `/etc/dovecot/conf.d`
-
-There are several examples shipped with dovecot:
-
-`./conf.d/auth-sql.conf.ext` - Example authentication config using SQL query.
-
-`./dovecot-dict-sql.conf.ext` - Example dict config for SQL. This is where the SQL query and other database config goes, and tells dovecot how to find the relevant fields from the table and return various values. (referenced from within the `auth-*` files above).
-
 
 Authentication configs are usually included from `./conf.d/10-auth.conf`.
 
@@ -41,15 +31,14 @@ Authentication configs are usually included from `./conf.d/10-auth.conf`.
 ```
 !include auth-mysite.conf.ext
 
-#!include auth-system.conf.ext
-#!include auth-sql.conf.ext
-#!include auth-ldap.conf.ext
-#!include auth-passwdfile.conf.ext
+#!include auth-deny.conf.ext
+#!include auth-master.conf.ext
+#!include auth-oauth2.conf.ext
 ```
 
 **Alternatively, add the relevant `passdb` / `userdb` sections (examples below) to your existing `auth-` config.**
 
-2. Make a copy of `dovecot-dict-sql.conf.ext` to a new file, e.g. `dovecot-sql-ap4rc.conf.ext`
+2. Dovecot auth configuration
 
 After changing the configuration, run `doveadm reload`
 
@@ -65,13 +54,13 @@ accept mail for non-existent users. It's important to test wrong passwords, vali
 Dovecot's authentication documentation is scattered over many pages, lacks explanation in places, and there are few _good_ 
 example configurations. Some of the examples (in the Dovecot docs or elsewhere) are incomplete or wrong.
 
-> This document provides useful examples, but we cannot provide for every possible configuration and environment. You need to **ADAPT THESE EXAMPLES** for your particular requirements. Please DO NOT just copy+paste these examples without thought and expect it to work!
+> This document provides useful examples, but we cannot provide for every possible configuration and environment. You need to **ADAPT THESE EXAMPLES** for your particular requirements. Please DO NOT just copy+paste these examples without thought.
 
-If unsure, refer to the Dovecot documentation (Dovecot 2.3):
+If unsure, refer to the Dovecot documentation (Dovecot 2.4.3):
 
-- [Password databases (passdb)](https://doc.dovecot.org/2.3/configuration_manual/authentication/password_databases_passdb) / [Password database extra fields](https://doc.dovecot.org/2.3/configuration_manual/authentication/password_database_extra_fields)
-- [User databases (userdb)](https://doc.dovecot.org/2.3/configuration_manual/authentication/user_databases_userdb) / [User database extra fields](https://doc.dovecot.org/2.3/configuration_manual/authentication/user_database_extra_fields)
-- [Multiple authentication databases](https://doc.dovecot.org/2.3/configuration_manual/authentication/multiple_authentication_databases)
+- [Password databases (passdb)](https://doc.dovecot.org/2.4.3/core/config/auth/passdb.html#password-databases-passdb) / [Password database extra fields](https://doc.dovecot.org/2.4.4/core/config/auth/passdb.html#user-extra-fields)
+- [User databases (userdb)](https://doc.dovecot.org/2.4.3/core/config/auth/userdb.html) / [User database extra fields](https://doc.dovecot.org/2.4.3/core/config/auth/userdb.html#extra-fields)
+- [Multiple authentication databases](https://doc.dovecot.org/2.4.3/core/config/auth/mutltiple.html)
 
 > **The order in which passdb / userdb entries appear in the configuration is significant!** 
 
@@ -86,75 +75,13 @@ Example dovecot configurations for each username format:
 
 Format: `"username@application"` (or: `"username@example.com@application`")
 
-### Auth Config
+TODO
 
-```
-
-## (Your existing passdb entries...)
-
-# ap4rc format 1
-passdb {
-  driver = sql
-  # skip unless username contains "@"
-  username_filter = *@*
-  args = /etc/dovecot/dovecot-sql-ap4rc.conf.ext
-  skip = authenticated
-}
-
-## (Your existing userdb entries...)
-
-# Example for virtualised dovecot, where user's mailboxes are in `/var/mailboxes/domain/username`
-
-userdb {
-  driver = static
-  skip = found
-  override_fields = uid=vmail gid=vmail home=/var/mailboxes/%Ld/%Ln
-}
-```
-
-You can also use the 'prefetch' method suggested in the example if your SQL query returns
-all the required `userdb_` fields. See [Dovecot 2.3: Prefetch Userdb](https://doc.dovecot.org/2.3/configuration_manual/authentication/prefetch_userdb/)
-
-### SQL Dict Config 
-
-`dovecot-sql-ap4rc.conf.ext`
-
-```
-driver = mysql
-connect = host=localhost dbname=<your_database_name> user=<your_database_user> password=<your_database_password>
-default_pass_scheme = SHA512
-
-# ap4rc format 1
-password_query = SELECT username,password \
-  FROM application_passwords \
-   WHERE username='%n' AND application='%d' \
-   AND created >= NOW() - INTERVAL 12 MONTH;  
-
-```
-
-If your dovecot usernames are email addresses, Dovecot (as of v2.2.6) supports the variables `%{domain_first}` and `%{domain_last}`:
-
-```
-password_query = SELECT username,password \
-  FROM application_passwords \
-   WHERE username='%n@%{domain_first}' AND application='%{domain_last}' \
-   AND created >= NOW() - INTERVAL 12 MONTH;  
-
-```
-
-Or you can select using the mysql query:
-
-```
-password_query = \
-   SELECT password, SUBSTRING_INDEX(username,'@',1) AS username, SUBSTRING_INDEX(username,'@',-1) AS domain \
-   FROM application_passwords \
-   WHERE username=SUBSTRING_INDEX('%u','@',2) \
-         AND application = SUBSTRING_INDEX('%d','@',-1) \
-         AND created >= NOW() - INTERVAL 12 MONTH;
-```
-
+(I don't use this format, as I found it quite cumbersome. I recommend using format 2)
 
 ## Format 2: Username
+
+This goes in your auth config e.g. `auth-mysite.conf.ext`.
 
 Format: `"username"` / `"user@example.com"` (use same username everywhere)
 
@@ -231,14 +158,13 @@ For many years, the recommendation was to use STARTTLS on ports 143/587 and depr
 This is still the default configuration for many mail servers / clients. (STARTTLS on ports 143/587 is preferred).
 
 RFC 8314 **reversed** this recommendation: Use implicit TLS everywhere and deprecate the use of STARTTLS on ports 143/587.
-This is shown in the example above. You may not wish to do this if you have many clients already using STARTTLS on 
-ports 143/587 and no way to auto-configure them. Provided client implementations use STARTTLS properly and the 
+This is shown in the example above. **You may not wish to do this if you have many clients already using STARTTLS on 
+ports 143/587 and no way to auto-configure them**. Provided client implementations use STARTTLS properly and the 
 server NEVER accepts plain text passwords before STARTTLS, there is nothing wrong with using STARTTLS. (In the past, 
 some clients were broken and sent the username/password without encryption anyway, even though the server asked them not to!)
 
 There is some confusion with client implementations and the wording "SSL" "TLS" "STARTTLS" "TLS/SSL" etc.
-SSL, "Secure Sockets Layer" [was deprecated in 2015](https://datatracker.ietf.org/doc/html/rfc7568) and should no longer be used.
-[It has been replaced by TLS](https://en.wikipedia.org/wiki/Transport_Layer_Security). 
+SSL, "Secure Sockets Layer" [was deprecated in 2015](https://datatracker.ietf.org/doc/html/rfc7568) and should no longer be used. [It has been replaced by TLS](https://en.wikipedia.org/wiki/Transport_Layer_Security). 
 
 Today, when people refer to "SSL" they usually mean "TLS".
 
@@ -247,8 +173,7 @@ with "TLS" meaning "Connect to unencrypted port, use STARTTLS"
 
 Other times, "SSL" means "force use of deprecated SSLv3", and "TLS" means "use TLS" (with/without STARTTLS ?)
 
-To remove this confusion, it is recommended to always just use implicit TLS: Then clients will ALWAYS 
-use encryption (or fail), instead of trying to use other unwanted/insecure methods.
+To remove this confusion, I just always use implicit TLS: Then clients will ALWAYS use encryption (or fail), instead of trying to use other unwanted/insecure methods.
 
 As I never use ports 143/587, I disable them to reduce port scans/login attempts etc. (It also seems a waste
 of effort having _every_ connection first connect unencrypted, then start encryption using STARTTLS, when
@@ -256,8 +181,6 @@ I _always_ want to use TLS anyway.)
 
 The goal is to make it simpler for users to configure the correct settings, ensuring they can ONLY 
 use the most secure encryption method, and only use an up-to-date client which supports it. 
-(And not, for example, try to downgrade to older, weaker encryption or get a hard-to-understand SSL error if 
-the client tried to use deprecated SSLv3.)
 
 
 ### Roundcube config.inc.php:
@@ -279,138 +202,146 @@ $config['smtp_host'] = 'ssl://mailserver.example.com:5465';
   - Use `default_host` and `default_port` instead of `imap_host`.
   - Use `smtp_server` and `smtp_port` instead of `smtp_host`.
 
-- **If using php earlier than ~7.2:**
-  - If "ssl://" connection fails, you may also need to set the following to force php to use TLS v1.2 and not use SSLv3 by default.
-  - Set `verify_peer` to false if you still have problems (e.g, the server name has changed, self-signed certs etc.)
-
-```php
-// See http://php.net/manual/en/context.ssl.php
-$config['imap_conn_options'] = array(
-  'ssl'         => array(
-     'verify_peer'  => false,
-     'protocol_version' => 'tlsv1.2',
-   ),
-);
-
-$config['smtp_conn_options'] = array(
-   'ssl'         => array(
-       'verify_peer'  => false,
-       'protocol_version' => 'tlsv1.2',
-   ),
-);
-```
 
 ### Auth Config Example
 
 ```
-# Your existing passdb entry: 
-# Login via webmail/trusted. ONLY allowed from roundcube:
-passdb {
-  # username_filter = *@*
+
+# Example lookup from static passwd file
+
+passdb system_users {
   driver = passwd-file
-  args = username_format=%Lu /etc/dovecot/auth/passwd
-  auth_verbose = no
+  username_filter = *@*
+  passwd_file_path = /etc/dovecot/auth/passwd
   result_failure = continue-fail
-  # Only allow if from roundcube/trusted nets:
-  override_fields = allow_real_nets=192.168.10.1,2001:DB8:10:1a4::1
+  auth_username_format = %{user | lower}
+  # Uncomment to only allow if from roundcube/trusted nets:
+  #fields {
+  #  allow_real_nets = local,192.168.10.1,2001:DB8:10:1a4::1
+  #}
+  auth_verbose = no
 }
 
+# Example SQL Login via webmail/trusted (based on postfixadmin's table (See README_LAST_ACCESS.md))
+
+sql_driver = mysql
+
+mysql localhost {
+  dbname = roundcube
+  user = YOUR_MYSQL_USER
+  password = YOUR_MYSQL_PASS
+}
+
+passdb sql_local {
+  driver = sql
+  username_filter = *@*
+  skip = authenticated
+  # TODO - Make default BLF-CRYPT. Migrate remaining SHA512 hashes.
+  # default_password_scheme = BLF-CRYPT
+  default_password_scheme = SHA512-CRYPT
+  auth_verbose = no
+  sql_query = SELECT username, password FROM p_mailbox WHERE username = '%{user}' AND active='1';
+
+  fields {
+    allow_real_nets = local,192.168.10.1,2001:DB8:10:1a4::1
+  }
+}
 
 # Roundcube connects to ports 5993 (imap) and 5465 (submission)
 # Webmail users must use 2FA. Reject application-specific password
 # if being used via webmail (port > 5000). Otherwise accept.
 
 # ap4rc format 2
-passdb {
+# Use the same username everywhere, select by password:
+
+passdb sql_ap { 
   driver = sql
-  # username_filter = *@example.com
-  args = /etc/dovecot/dovecot-sql-ap4rc.conf.ext
-  auth_verbose = no
-  override_fields = allow_real_nets=%{if;%{real_local_port};>;5000;127.0.0.2;%{real_remote_ip}}
+  username_filter = *@*
+  # username_filter = *@example.com  # Or limit to my domain
   skip = authenticated
+  default_password_scheme = SHA512
+  auth_verbose = no
+
+  sql_query = \
+   SELECT username, password, id as userdb_ap_id \
+   FROM application_passwords \
+   WHERE username='%{user}' \
+         AND password = '%{password | sha512}' \
+         AND created >= NOW() - INTERVAL 12 MONTH;
+
+  fields {
+    allow_real_nets = local,%{real_local_port | if(">", 5000, "127.0.0.2", real_remote_ip)}
+  }
+
 }
 
 [...]
 
-userdb {
+# Now the corresponding userdb config:
+
+# Get info for static system users
+userdb system_users {
   driver = passwd-file
-  args = username_format=%Lu /etc/dovecot/auth/passwd
-  default_fields = home=/var/mailboxes/%Ld/%Ln
-  override_fields = uid=vmail gid=vmail
+  passwd_file_path = /etc/dovecot/auth/passwd
+  auth_username_format = %{user | lower}
+
+  fields {
+    home = /var/mailboxes/%{user | domain | lower}/%{user | username | lower}
+  }
 }
 
-userdb {
+# Example post-login (or if no login e.g. lmtp), get all other user fields from sql:
+
+userdb sql {
+  driver=sql
+  skip=found
+  sql_iterate_query = SELECT username FROM p_mailbox WHERE active = '1';
+  sql_query = SELECT username, CONCAT('/var/mailboxes/', maildir) AS home, \
+                CONCAT('*:bytes=', quota) AS quota_rule \
+              FROM p_mailbox \
+              WHERE username = '%{user}' \
+              AND active='1';
+}
+
+#
+# Example fallback - add wanted fields if nothing else provides:
+# 
+userdb static {
   driver = static
   skip = found
-  override_fields = uid=vmail gid=vmail home=/var/mailboxes/%Ld/%Ln
+
+  fields {
+    home = /var/mailboxes/%{user | domain | lower}/%{user | username | lower}
+  }
+
 }
 
 ```
 
-It's also possible to use IP without using different ports, but it starts to look ugly if you have a few, or IPv6 and IPv4:
+It's also possible to use IP without using different ports, but it starts to look ugly if you have a few, or IPv6 and IPv4.
+
 ```
 # ap4rc format 2 - single IP 2001:DB8:10:1a4::2
-passdb {
-  driver = sql
-  username_filter = *@example.com
-  args = /etc/dovecot/dovecot-sql-ap4rc.conf.ext
-  auth_verbose = no
-  override_fields = allow_real_nets=%{if;%{real_remote_ip};eq;2001\:DB8\:10\:1a4\:\:2;127.0.0.2;%{real_remote_ip}}
-  skip = authenticated
+passdb sql_ap {
+[...]
+  fields {
+    allow_real_nets = local,%{real_remote_ip | if("eq", 2001\:DB8\:10\:1a4\:\:2, "127.0.0.2", real_remote_ip)}
+  }
 }
 ```
-... To add more, you end up with this:
-
-```
-  override_fields = allow_real_nets=%{if;%{real_remote_ip};eq;2001\:DB8\:10\:1a4\:\:2;127.0.0.2;%{if;%{real_remote_ip};eq;192.168.206.64;127.0.0.2;%{real_remote_ip}}}
-```
-
 
 ### SQL Dict Config 
 
 `dovecot-sql-ap4rc.conf.ext`
 
+- Dict/query config files are no longer required in Dovecot 2.4.
 
-```
-driver = mysql
-connect = host=localhost dbname=<your_database_name> user=<your_database_user> password=<your_database_password>
-default_pass_scheme = SHA512
-
-# ap4rc format 2
-# Use the same username everywhere, select by password:
-password_query = \
-   SELECT username, password, id as userdb_ap_id \
-   FROM application_passwords \
-   WHERE username='%u' \
-         AND password = SHA2('%w',"512") \
-         AND created >= NOW() - INTERVAL 12 MONTH;
-
-```
-
-- If dovecot's `auth_debug` is enabled, the SQL query (and hence the user's password) can be logged. Ensure `auth_debug` is turned off on production servers. Newer versions of Dovecot allow better filtering of log events (see `log_debug`)
-
-- Dovecot v2.2.27+ support hashing a variable instead of passing the plaintext password to the SQL in order for mySQL to hash the password. This is safer since plaintext passwords will not show up in SQL/Dovecot server debug logs:
-
-```
-driver = mysql
-connect = host=localhost dbname=<your_database_name> user=<your_database_user> password=<your_database_password>
-default_pass_scheme = SHA512
-
-# ap4rc format 2
-# Use the same username everywhere, select by password:
-password_query = \
-   SELECT username, password, id as userdb_ap_id \
-   FROM application_passwords \
-   WHERE username='%u' \
-         AND password = '%{sha512:password}' \
-         AND created >= NOW() - INTERVAL 12 MONTH;
-
-```
-
-This query includes an example of returning the unique id of the application password. This is not
-required, but make it possible to determine which entry is being used, or for logging when each application password was last used. Can be used later as: `%{userdb:ap_id}`
 
 ### Notes
+
+- If dovecot's debug logging is enabled, the SQL query (and hence the user's password) can be logged. Ensure `auth_debug_passwords` and / or `log_debug=category=auth` is turned off on production servers.
+
+- Dovecot v2.2.27+ support hashing a variable instead of passing the plaintext password to the SQL in order for mySQL to hash the password. This is safer since plaintext passwords will not show up in SQL/Dovecot server debug logs.
 
 - Searching by password might not give good performance if you have a LOT of users.
 
@@ -453,7 +384,7 @@ passdb {
 
 passdb { 
   # ... passdb for application specific passwords...
-  username_filter = !*@example.com *@*
+  username_filter = !*@example.com, *@*
 }
 ```
 
@@ -470,20 +401,21 @@ users also includes removing application_passwords entries.)
 
 **If your usernames are the same** one method is shown in the example 2 above. For your EXISTING `passdb` config, add something like:
 
-`override_fields = allow_real_nets=192.168.10.1,2001:DB8:10:1a4::1`
+```
+  fields {
+    allow_real_nets = local,192.168.10.1,2001:DB8:10:1a4::1
+  }
+```
 
-Where the IP addresses are your roundcube hosts. You can also add `local` temporarily to enable testing with `doveadm auth` / `doveadm user`:
-
-`override_fields = allow_real_nets=local,192.168.10.1,2001:DB8:10:1a4::1`
+Where the IP addresses are your roundcube hosts. You can also add `local` temporarily to enable testing with `doveadm auth` / `doveadm user`.
 
 This means the `passdb` section will only succeed (even if the password is correct) if the login is from the specified IPs.
 
 Next, we want to express the _opposite_ logic: Do not allow the application specific passwords to be used via roundcube.
 
-Unfortunately dovecot (at least 2.3.20) does not provide an easy way to do this, e.g. "`deny_real_nets`"  or "`allow_real_nets = !...`"
+Unfortunately dovecot (at least 2.4.x) does not provide an easy way to do this, e.g. "`deny_real_nets`"  or "`allow_real_nets = !...`"
 
-If your 2fa plugin _always_ enforces the use of 2fa, you may not care about this case: roundcube will prompt for 2fa authentication
-regardless of which password is used.
+If your 2fa plugin _always_ enforces the use of 2fa, you may not care about this case: roundcube will prompt for 2fa authentication regardless of which password is used.
 
 See the Auth config example for method 2 above.
 
@@ -514,5 +446,5 @@ seems slow enough to make large-scale brute-force attacks fairly unfeasible. You
 potential attackers to exploit roundcube's differing failed login behaviour to determine if a user exists or not. (Or just
 to stop many failed login attempts from locking out users / wasting resources and cluttering your logs.)
 
-Dovecot has its own [Authentication penalty support](https://doc.dovecot.org/configuration_manual/authentication/auth_penalty) and there is a [Dovecot Authentication penalty plugin](https://packagist.org/packages/takerukoushirou/roundcube-dovecot_client_ip) for roundcube.
+Dovecot has its own [Authentication penalty support](https://doc.dovecot.org/2.4.3/core/config/auth/penalty.html) and there is a [Dovecot Authentication penalty plugin](https://packagist.org/packages/takerukoushirou/roundcube-dovecot_client_ip) for roundcube.
 

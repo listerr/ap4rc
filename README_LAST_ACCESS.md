@@ -1,45 +1,55 @@
 # Show Last Access / IP 
 
-With Dovecot's [last_login plugin](https://doc.dovecot.org/2.3/configuration_manual/lastlogin_plugin/) 
+With Dovecot's [last_login plugin](https://doc.dovecot.org/2.4.3/core/plugins/last_login.html) 
 enabled, we can get information on the last access time and IP address and display this for each
 application specific password.
 
 **This feature is a work in progress and may change / disappear.**
 
-## Dovecot configuration
+## Dovecot 2.4.x configuration
 
 `/etc/dovecot/conf.d/10-last-login.conf:`
 
 ```
-plugin {
-  last_login_dict = proxy::sql
-  last_login_key = last-login/%{service}/%{user}/%{remote_ip}/%{userdb:ap_id:0}
-  last_login_precision = s
+last_login {
+  dict proxy {
+    name = sql
+  }
+  key = last-login/%{service}/%{user}/%{remote_ip}/%{userdb:ap_id | default(0)}
+  precision = s
 }
 
-dict {
-  sql = mysql:/etc/dovecot/dovecot-dict-sql.conf.ext
-}
-```
+dict_server {
+  dict sql {
+    sql_driver = mysql
+    mysql localhost {
+      dbname = roundcube
+      user = YOUR_MYSQL_USER
+      password = YOUR_MYSQL_PASS
+    }
 
-`/etc/dovecot/dovecot-dict-sql.conf.ext:`
+    dict_map shared/last-login/$service/$user/$remote_ip/$ap_id {
+      sql_table = last_login
+      value_field last_access {
+        type = uint
+      }
 
-```
-connect = host=<host> dbname=<database_name> user=<database_user> password=<database_password>
-
-map {
-  pattern = shared/last-login/$service/$user/$remote_ip/$ap_id
-  table = last_login
-  value_field = last_access
-  value_type = uint
-
-  fields {
-    userid = $user
-    service = $service
-    last_ip = $remote_ip
-    ap_id = $ap_id
+      key_field userid {
+        value = $user
+      }
+      key_field service {
+        value = $service
+      }
+      key_field last_ip {
+        value = $remote_ip
+      }
+      key_field ap_id {
+        value = $ap_id
+      }
+    }
   }
 }
+
 ```
 
 DB Schema (MySQL):
@@ -79,19 +89,22 @@ Next, the passdb lookup for application passwords needs to return the id of the 
 (In this case returning `ap_id` to `userdb_ap_id`)
 
 ```
-# Database driver: mysql, pgsql, sqlite
-driver = mysql
-connect = host=<host> dbname=<database_name> user=<database_user> password=<database_password>
-default_pass_scheme = SHA512
+passdb sql_ap { 
 
-# Use the same username everywhere,
-# select by password:
-password_query = \
+  driver = sql
+ # [...]
+
+  sql_query = \
    SELECT username, password, id as userdb_ap_id \
    FROM application_passwords \
-   WHERE username='%u' \
-         AND password = '%{sha512:password}' \
+   WHERE username='%{user}' \
+         AND password = '%{password | sha512}' \
          AND created >= NOW() - INTERVAL 12 MONTH;
+
+# [...]
+
+}
+
 ```
 
 Here is a slightly fancier example where dovecot uses the table p_mailbox for regular 
@@ -100,17 +113,25 @@ users, and for application passwords, we join this table to get extra properties
 removed from p_mailbox, then all the application passwords will also stop working.
 
 ```
-password_query = \
+passdb sql_ap { 
+  driver = sql
+# [...]
+
+  sql_query = \
    SELECT ap.username AS username, \
     ap.password AS password, \
     ap.id AS userdb_ap_id \
    FROM \
-    roundcubemail.application_passwords ap INNER JOIN \
-    roundcubemail.p_mailbox mb ON mb.username = ap.username \
-   WHERE ap.username='%u' \
+    roundcube.application_passwords ap INNER JOIN \
+    roundcube.p_mailbox mb ON mb.username = ap.username \
+   WHERE ap.username='%{user}' \
          AND mb.active = 1 \
-         AND ap.password = '%{sha512:password}' \
+         AND ap.password = '%{password | sha512}' \
          AND ap.created >= NOW() - INTERVAL 12 MONTH;
+# [...]
+
+}
+
 ```
 
 After changing the configuration, run `doveadm reload`
@@ -215,23 +236,41 @@ Example dovecot query to lookup from the above.
 `/etc/dovecot/dovecot-sql-users.conf.ext:` 
 
 ```
-driver = mysql
-connect = host=<host> dbname=<database_name> user=<database_user> password=<database_password>
-default_pass_scheme = BLF-CRYPT
 
-password_query = \
-       SELECT username, \
-              password \
-        FROM p_mailbox \
-        WHERE username = '%u' AND active='1';
+sql_driver = mysql
 
-user_query = \
-       SELECT username, \
-              CONCAT('/var/mailboxes/', maildir) AS home, \
-              CONCAT('*:bytes=', quota) AS quota_rule \
-        FROM p_mailbox \
-        WHERE username = '%u' AND active='1';
+mysql localhost {
+  dbname = roundcube
+  user = YOUR_MYSQL_USER
+  password = YOUR_MYSQL_PASS
+}
 
-# Query to get a list of all usernames.
-iterate_query = SELECT username FROM p_mailbox WHERE active = '1';
+passdb sql_local {
+  driver = sql
+  username_filter = *@*
+  skip = authenticated
+  # TODO - Make default BLF-CRYPT. Migrate remaining SHA512 hashes.
+  # default_password_scheme = BLF-CRYPT
+  default_password_scheme = SHA512-CRYPT
+  auth_verbose = no
+  sql_query = SELECT username, password FROM p_mailbox WHERE username = '%{user}' AND active='1';
+
+  fields {
+    allow_real_nets = local,5.57.93.167,2a00:eb20:203::167
+  }
+}
+
+# [...]
+
+userdb sql {
+  driver=sql
+  skip=found
+  sql_iterate_query = SELECT username FROM p_mailbox WHERE active = '1';
+  sql_query = SELECT username, CONCAT('/var/mailboxes/', maildir) AS home, \
+                CONCAT('*:bytes=', quota) AS quota_rule \
+              FROM p_mailbox \
+              WHERE username = '%{user}' \
+              AND active='1';
+}
+
 ```
